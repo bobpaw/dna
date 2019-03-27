@@ -1,5 +1,6 @@
 #include <string>
-#include <type_traits>
+#include <iostream>
+#include <cstdint>
 
 #ifndef DNA_DNA_H_
 #define DNA_DNA_H_
@@ -15,11 +16,12 @@ namespace DNA {
 	"Glu", "Met", "Leu", "Leu", "Val", "Thr", "Ser", "Pro", "Ala", "Arg", "Trp",
 	"Arg", "Gly"};
 
-	const char A = 0, T = 1, U = T, C = 2, G = 3, DNA = 0, RNA = 1;
+	const uint_least8_t A = 0, T = 1, U = T, C = 2, G = 3, DNA = 0, RNA = 1;
 	class Codon {
 	private:
-		char bm;
+		uint_least8_t bm;
 	public:
+		Codon () : bm(0) {}
 		Codon (decltype(bm) t, decltype(bm) b1, decltype(bm) b2, decltype(bm) b3) {
 			setType(t);
 			set(0, b1);
@@ -29,17 +31,52 @@ namespace DNA {
 
 		Codon (decltype(bm) b) : bm(b) {}
 
-		unsigned char operator[] (int n) const noexcept {
+		Codon (std::string str) : bm(0) {
+			setType(RNA);
+			if (str.size() >= 3)
+				for (int i = 0; i < 3; ++i)
+					switch ((char) str[i]) {
+						case 'A': case 'a':
+						set(i, A); break;
+						case 'T': case 't':
+						case 'U': case 'u':
+						set(i, U); break;
+						case 'C': case 'c':
+						set(i, C); break;
+						case 'G': case 'g':
+						set(i, G); break;
+					}
+		}
+
+		decltype(bm) operator[] (int n) const noexcept {
 			return (bm >> n * 2) & 0x3;
 		}
 
 		decltype(bm) operator() () const noexcept { return bm; }
+		decltype(bm) & operator() () noexcept { return bm; }
 
 		decltype(letters[0]) letter (void) const { return letters[(int) (bm & 63)]; }
 		decltype(names[0]) name (void) const { return names[(int) (bm & 63)]; }
 
 		void set (int n, decltype(bm) val) noexcept {
-			val &= 0x3;
+			switch (val) {
+			case 'A':
+			case 'a':
+				val = A; break;
+			case 'T':
+			case 't':
+			case 'U':
+			case 'u':
+				val = U; break;
+			case 'C':
+			case 'c':
+				val = C; break;
+			case 'G':
+			case 'g':
+				val = G; break;
+			default:
+				val &= 0x3;
+			}
 			val <<= n * 2;
 			bm &= ~(0x3 << n * 2);
 			bm |= val;
@@ -84,7 +121,23 @@ namespace DNA {
 			return !operator==(other);
 		}
 
+		friend std::ostream& operator<< (std::ostream& stream, const Codon& codon) {
+			for (int i = 0; i < 3; ++i)
+				switch (codon[i]) {
+				case A:
+					stream << 'A'; break;
+				case T:
+					stream << (codon.bm & 64 == DNA ? 'T' : 'U'); break;
+				case C:
+					stream << 'C'; break;
+				case G:
+					stream << 'G'; break;
+				default:
+					stream << '?';
+				}
+			return stream;
+		}
 	} Met(RNA, A, U, G); // class Codon
 } // namespace DNA
 
-#endif
+#endif // DNA_DNA_H_
